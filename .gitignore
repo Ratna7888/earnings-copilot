@@ -9,3 +9,6 @@ models/
 .qdrant/
 *.zip
 .streamlit/secrets.toml
+data/qdrant_db/
+notebooks/
+retrieval/
