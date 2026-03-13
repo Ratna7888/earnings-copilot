@@ -2,6 +2,17 @@
 import sys, time, random
 sys.path.insert(0, '.')
 from agents.graph import build_graph
+import streamlit as st
+import os
+
+# Load secrets from Streamlit Cloud or local .env
+try:
+    os.environ['QDRANT_URL'] = st.secrets['QDRANT_URL']
+    os.environ['QDRANT_API_KEY'] = st.secrets['QDRANT_API_KEY']
+    os.environ['OPENROUTER_API_KEY'] = st.secrets['OPENROUTER_API_KEY']
+except:
+    from dotenv import load_dotenv
+    load_dotenv()
 
 @st.cache_data(ttl=60)
 def get_prices(tickers):
