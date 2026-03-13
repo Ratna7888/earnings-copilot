@@ -1,0 +1,10 @@
+﻿streamlit
+langchain
+langchain-community
+langgraph
+qdrant-client
+sentence-transformers
+openai
+python-dotenv
+yfinance
+requests
