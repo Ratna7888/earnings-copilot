@@ -25,30 +25,20 @@ Every KPI in the investment memo is:
 ---
 
 ## 🏗️ Architecture
-`
-SEC Filings (220 filings, 20 S&P 500 tickers, 2020-2024)
-        ↓ parse_filings.py — extracts financial tables
-2,464 chunks indexed in Qdrant Cloud
-        ↓
-┌─────────────────────────────────────────┐
-│           LangGraph Agent Pipeline      │
-│                                         │
-│  🔍 Extraction Agent                   │
-│     Semantic search → KPI extraction   │
-│          ↓                              │
-│  📢 Narrative Agent                    │
-│     Risk flagging + tone analysis      │
-│          ↓                              │
-│  ✅ Verification Agent                 │
-│     Every number checked against source│
-│          ↓                              │
-│  📝 Memo Writer Agent                  │
-│     Citation-grounded Bull/Bear/Verdict│
-└─────────────────────────────────────────┘
-        ↓
-Investment Memo with 100% verified KPIs
-`
 
+**Data Pipeline:**
+```
+SEC EDGAR (220 filings) → parse_filings.py → 2,464 chunks → Qdrant Cloud
+```
+
+**Agent Pipeline:**
+
+| Step | Agent | What it does |
+|---|---|---|
+| 1 | 🔍 Extraction Agent | Semantic search on Qdrant → LLM extracts KPIs as JSON |
+| 2 | 📢 Narrative Agent | Generates risk flags and warnings |
+| 3 | ✅ Verification Agent | Every number cross-checked against source chunk |
+| 4 | 📝 Memo Writer Agent | Generates Bull/Bear/Verdict using only verified KPIs |
 ---
 
 ## 🤖 Fine-Tuned Models
@@ -100,26 +90,21 @@ Both models were trained to:
 ---
 
 ## 📁 Project Structure
-`
-earnings-copilot/
-├── agents/
-│   ├── state.py              # Shared TypedDict state
-│   ├── extraction_agent.py   # Qdrant retrieval + KPI extraction
-│   ├── narrative_agent.py    # Risk flagging
-│   ├── verification_agent.py # Number cross-checking
-│   └── graph.py              # LangGraph orchestration + memo writer
-├── scripts/
-│   ├── download_filings.py   # SEC EDGAR ingestion
-│   ├── parse_filings.py      # HTML/XBRL parsing → chunks
-│   ├── build_vectorstore.py  # Qdrant indexing
-│   ├── generate_training_data.py  # LLM-assisted labeling
-│   ├── balance_dataset.py    # Fix class imbalance (93%→50% UNVERIFIABLE)
-│   └── format_for_finetuning.py   # ChatML formatting + train/val split
-├── ui/
-│   └── app.py                # Streamlit UI with live stock prices
-└── requirements.txt
-`
 
+| File | Purpose |
+|---|---|
+| `agents/state.py` | Shared TypedDict state passed between all agents |
+| `agents/extraction_agent.py` | Qdrant retrieval + KPI extraction |
+| `agents/narrative_agent.py` | Risk flagging |
+| `agents/verification_agent.py` | Number cross-checking against source |
+| `agents/graph.py` | LangGraph orchestration + memo writer |
+| `scripts/download_filings.py` | SEC EDGAR ingestion |
+| `scripts/parse_filings.py` | HTML/XBRL parsing → financial table chunks |
+| `scripts/build_vectorstore.py` | Qdrant Cloud indexing |
+| `scripts/generate_training_data.py` | LLM-assisted training data labeling |
+| `scripts/balance_dataset.py` | Fix class imbalance (93% → 50% UNVERIFIABLE) |
+| `scripts/format_for_finetuning.py` | ChatML formatting + train/val split |
+| `ui/app.py` | Streamlit UI with live stock prices |
 ---
 
 ## 🚀 Run Locally
