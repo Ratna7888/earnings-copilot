@@ -35,6 +35,12 @@ if "filings" not in existing:
         collection_name="filings",
         vectors_config=VectorParams(size=384, distance=Distance.COSINE)
     )
+    # Required by Qdrant Cloud before the "ticker" field can be used in a query filter
+    client.create_payload_index(
+        collection_name="filings",
+        field_name="ticker",
+        field_schema="keyword"
+    )
     print("Collection 'filings' created.")
 else:
     print("Collection 'filings' already exists, appending...")

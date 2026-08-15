@@ -1,18 +1,19 @@
 ﻿import streamlit as st
-import sys, time, random
+import sys, os, time, random
 sys.path.insert(0, '.')
-from agents.graph import build_graph
-import streamlit as st
-import os
 
-# Load secrets from Streamlit Cloud or local .env
+# Load secrets from Streamlit Cloud or local .env — must happen before importing
+# agents.graph, since agents/extraction_agent.py builds its Qdrant/OpenAI clients
+# from os.environ at module import time.
 try:
     os.environ['QDRANT_URL'] = st.secrets['QDRANT_URL']
     os.environ['QDRANT_API_KEY'] = st.secrets['QDRANT_API_KEY']
     os.environ['OPENROUTER_API_KEY'] = st.secrets['OPENROUTER_API_KEY']
-except:
+except Exception:
     from dotenv import load_dotenv
     load_dotenv()
+
+from agents.graph import build_graph
 
 @st.cache_data(ttl=60)
 def get_prices(tickers):
