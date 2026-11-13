@@ -5,13 +5,8 @@ from agents.state import EarningsState
 from agents.extraction_agent import extraction_agent
 from agents.verification_agent import verification_agent
 from agents.narrative_agent import narrative_agent
-from openai import OpenAI
+from agents.llm import chat
 load_dotenv()
-
-client = OpenAI(
-    base_url='https://openrouter.ai/api/v1',
-    api_key=os.getenv('OPENROUTER_API_KEY')
-)
 
 def memo_writer_agent(state: dict) -> dict:
     kpi_summary = '\n'.join([
@@ -39,15 +34,7 @@ Structure:
 Only reference verified KPIs. Never invent numbers."""
 
     try:
-        resp = client.chat.completions.create(
-            model='openrouter/free',
-            messages=[{'role': 'user', 'content': prompt}],
-            timeout=30,
-            extra_body={'reasoning': {'enabled': False}}
-        )
-        memo = resp.choices[0].message.content
-        if not memo:
-            raise ValueError('model returned an empty response')
+        memo = chat([{'role': 'user', 'content': prompt}], timeout=60)
     except Exception as e:
         memo = f'Memo generation failed: {e}\n\nVerified KPIs:\n{kpi_summary}'
 

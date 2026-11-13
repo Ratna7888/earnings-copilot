@@ -1,8 +1,8 @@
 ﻿import json, os, re
 from qdrant_client import QdrantClient, models
 from sentence_transformers import SentenceTransformer
-from openai import OpenAI
 from dotenv import load_dotenv
+from agents.llm import chat
 load_dotenv()
 
 embedder = SentenceTransformer('BAAI/bge-small-en-v1.5')
@@ -11,12 +11,6 @@ qdrant = QdrantClient(
     api_key=os.getenv('QDRANT_API_KEY'),
     check_compatibility=False
 )
-client = OpenAI(
-    base_url='https://openrouter.ai/api/v1',
-    api_key=os.getenv('OPENROUTER_API_KEY')
-)
-
-EXTRACTION_MODEL = 'openrouter/free'
 
 SYSTEM_PROMPT = '''You are a financial KPI extraction model. Extract metrics from SEC filing chunks.
 You MUST respond ONLY with this exact JSON format and nothing else:
@@ -94,20 +88,15 @@ def retrieve_chunks(ticker, query, top_k=20):
 
 def extract_kpi(chunk_text, question):
     try:
-        resp = client.chat.completions.create(
-            model=EXTRACTION_MODEL,
-            messages=[
+        raw = chat(
+            [
                 {'role': 'system', 'content': SYSTEM_PROMPT},
                 {'role': 'user', 'content': f'Filing chunk:\n{chunk_text}\n\nExtract: {question}'}
             ],
-            temperature=0,
-            timeout=30,
             max_tokens=200,
-            # openrouter/free may route to a reasoning model, which can spend the whole
-            # max_tokens budget on reasoning and return content=None
-            extra_body={'reasoning': {'enabled': False}}
+            temperature=0,
+            timeout=30
         )
-        raw = resp.choices[0].message.content or ''
         cleaned = clean_json(raw)
         parsed = json.loads(cleaned)
 
