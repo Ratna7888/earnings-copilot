@@ -1,5 +1,6 @@
 ﻿import os, json, re, html
 from pathlib import Path
+from datetime import date, timedelta
 from tqdm import tqdm
 from collections import Counter
 
@@ -70,7 +71,33 @@ def extract_form_type(filepath):
             return p
     return 'UNKNOWN'
 
-def make_chunks(text, ticker, form_type, source_file, prefix, chunk_size=500, overlap=50):
+def extract_fiscal_period(raw, form_type):
+    # EDGAR header: "CONFORMED PERIOD OF REPORT: 20240330", "FISCAL YEAR END: 0930"
+    period = re.search(r'CONFORMED PERIOD OF REPORT:\s*(\d{8})', raw)
+    if not period:
+        return {}
+    end = date(int(period.group(1)[:4]), int(period.group(1)[4:6]), int(period.group(1)[6:]))
+    fye = re.search(r'FISCAL YEAR END:\s*(\d{4})', raw)
+    month, day = (int(fye.group(1)[:2]), int(fye.group(1)[2:])) if fye else (12, 31)
+
+    # Most recent fiscal year end at least a month before this period (52/53-week
+    # calendars land a few days either side of the nominal date). Count quarters
+    # from there, rounding so uneven 12/16-week quarters still map correctly.
+    prev_fye = max(
+        d for d in (date(y, month, min(day, 28 if month == 2 else day)) for y in range(end.year - 2, end.year + 1))
+        if d <= end - timedelta(days=30)
+    )
+    quarter = round((end - prev_fye).days / 91.3)
+    # Name the year by when it ends, so a year ending Jan 1 2023 (JNJ) is FY2022
+    # while one ending Jan 28 2024 (NVDA) is FY2024
+    fiscal_year = (prev_fye.replace(year=prev_fye.year + 1) - timedelta(days=7)).year
+    return {
+        'period_end': end.isoformat(),
+        'fiscal_year': fiscal_year,
+        'fiscal_quarter': 'FY' if form_type == '10-K' else f'Q{quarter}',
+    }
+
+def make_chunks(text, ticker, form_type, source_file, prefix, period=None, chunk_size=500, overlap=50):
     words = text.split()[:MAX_WORDS_PER_TABLE]
     chunks = []
     for i in range(0, len(words), chunk_size - overlap):
@@ -83,6 +110,7 @@ def make_chunks(text, ticker, form_type, source_file, prefix, chunk_size=500, ov
             'form_type': form_type,
             'source_file': str(source_file),
             'chunk_type': prefix,
+            **(period or {}),
             'text': chunk
         })
     return chunks
@@ -109,17 +137,19 @@ def process_filings(raw_dir='data/raw', out_dir='data/processed'):
             skipped += 1
             continue
 
+        period = extract_fiscal_period(raw, form_type)
+
         # Extract financial tables (priority)
         tables = extract_financial_tables(doc)
         for ti, table_text in enumerate(tables):
-            chunks = make_chunks(table_text, ticker, form_type, filepath, f'table{ti}')
+            chunks = make_chunks(table_text, ticker, form_type, filepath, f'table{ti}', period)
             all_records.extend(chunks)
 
         # Extract narrative paragraphs (secondary)
         paragraphs = extract_narrative_spans(doc)
         narrative_text = ' '.join(paragraphs[:50])  # cap narrative
         if narrative_text:
-            chunks = make_chunks(narrative_text, ticker, form_type, filepath, 'narrative')
+            chunks = make_chunks(narrative_text, ticker, form_type, filepath, 'narrative', period)
             all_records.extend(chunks)
 
     print(f'\nTotal chunks: {len(all_records)} | Skipped: {skipped}')

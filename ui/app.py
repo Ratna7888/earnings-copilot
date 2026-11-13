@@ -176,7 +176,7 @@ with col1:
     with ycol:
         year = st.selectbox('Year', YEARS)
     fiscal_period = f'{quarter} {year}'
-    st.caption(f'Selected: **{fiscal_period}**')
+    st.caption(f'Selected: **{fiscal_period}** (fiscal year; Q4 uses the annual 10-K)')
     run = st.button('🚀 Generate Memo', type='primary', use_container_width=True)
     st.divider()
     st.markdown('**How it works:**')
@@ -211,6 +211,10 @@ with col2:
 
             agent_ph.empty()
             status_ph.empty()
+
+            if result.get('error'):
+                st.warning(result['error'])
+                st.stop()
 
             # Results
             score  = result.get('verification_score', 0)

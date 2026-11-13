@@ -41,6 +41,16 @@ if "filings" not in existing:
         field_name="ticker",
         field_schema="keyword"
     )
+    client.create_payload_index(
+        collection_name="filings",
+        field_name="fiscal_year",
+        field_schema="integer"
+    )
+    client.create_payload_index(
+        collection_name="filings",
+        field_name="fiscal_quarter",
+        field_schema="keyword"
+    )
     print("Collection 'filings' created.")
 else:
     print("Collection 'filings' already exists, appending...")

@@ -47,7 +47,8 @@ def build_graph():
     g.add_node('verify', verification_agent)
     g.add_node('write', memo_writer_agent)
     g.set_entry_point('extract')
-    g.add_edge('extract', 'narrate')
+    # No filing for the requested period: stop rather than write a memo from nothing
+    g.add_conditional_edges('extract', lambda s: END if s.get('error') else 'narrate')
     g.add_edge('narrate', 'verify')
     g.add_edge('verify', 'write')
     g.add_edge('write', END)
