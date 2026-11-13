@@ -42,9 +42,12 @@ Only reference verified KPIs. Never invent numbers."""
         resp = client.chat.completions.create(
             model='openrouter/free',
             messages=[{'role': 'user', 'content': prompt}],
-            timeout=30
+            timeout=30,
+            extra_body={'reasoning': {'enabled': False}}
         )
         memo = resp.choices[0].message.content
+        if not memo:
+            raise ValueError('model returned an empty response')
     except Exception as e:
         memo = f'Memo generation failed: {e}\n\nVerified KPIs:\n{kpi_summary}'
 

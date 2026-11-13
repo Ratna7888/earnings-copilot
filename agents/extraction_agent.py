@@ -102,9 +102,12 @@ def extract_kpi(chunk_text, question):
             ],
             temperature=0,
             timeout=30,
-            max_tokens=200
+            max_tokens=200,
+            # openrouter/free may route to a reasoning model, which can spend the whole
+            # max_tokens budget on reasoning and return content=None
+            extra_body={'reasoning': {'enabled': False}}
         )
-        raw = resp.choices[0].message.content
+        raw = resp.choices[0].message.content or ''
         cleaned = clean_json(raw)
         parsed = json.loads(cleaned)
 
